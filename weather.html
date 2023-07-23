@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Weather App</title>
+  <script src="https://unpkg.com/vue@next"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <style>
+    /* Center align the app content */
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    /* Style the input and button */
+    input {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>目前天氣</h1>
+    <input v-model="location" placeholder="Enter location"><br>
+    <button @click="getWeatherData">Get Weather</button>
+    <div v-if="weatherData">
+      <h2>location: {{ resolvedAddress }}</h2>
+      <p>Current Temperature: {{ currentTemperature }}°C</p>
+      <p>Feels Like: {{ temperaturefeellike }}°C</p>
+      <p>visibility: {{ weatherData.visibility}}m</p>
+      <p>windspeed: {{ weatherData.windspeed}}m/s</p>
+      <p>Sunrise Time: {{ weatherData.sunrise }}</p>
+      <p>Sunset Time: {{ weatherData.sunset }}</p>
+      <p>Weather Condition: {{ weatherData.conditions }}</p>
+      <h2>15 days forecast</h2>
+    </div>
+  
+    <!-- Table to display the 15-day forecast data -->
+    <table v-if="showData">
+      <thead>
+        <tr>
+          <th>Date  </th>
+          <th>Temp Max  °C</th>
+          <th>Temp Min  °C</th>
+          <th>Feels Like Max °C</th>
+          <th>Feels Like Min °C</th>
+          <th>Humidity  </th>
+          <th>Conditions  </th>
+          <th>Sunrise  </th>
+          <th>Sunset  </th>
+          <th>Visibility  m</th>
+          <th>Windspeed  m/s</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(datetime, index) in datetimes" :key="index">
+          <td>{{ datetime }}</td>
+          <td>{{ tempmaxs[index] }}</td>
+          <td>{{ tempmins[index] }}</td>
+          <td>{{ feelslikemaxs[index] }}</td>
+          <td>{{ feelslikemins[index] }}</td>
+          <td>{{ humiditys[index] }}</td>
+          <td>{{ conditionss[index] }}</td>
+          <td>{{ sunrises[index] }}</td>
+          <td>{{ sunsets[index] }}</td>
+          <td>{{ visibilitys[index] }}</td>
+          <td>{{ windspeeds[index] }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+   const app = Vue.createApp({
+    data() {
+      return {
+        location: '',
+        weatherData: null,
+        resolvedAddress: '', // Add a new property to store the API location
+        showData: false, // Add the showData property to control visibility
+        datetimes: [],
+        tempmaxs: [],
+        tempmins: [],
+        feelslikemaxs: [],
+        feelslikemins: [],
+        humiditys: [],
+        conditionss: [],
+        sunrises: [],
+        sunsets: [],
+        visibilitys: [],
+        windspeeds: [],
+      };
+    },
+    methods: {
+
+      async getWeatherData() {
+        let roundDecimal = function (val, precision) {
+            return Math.round(Math.round(val * Math.pow(10, (precision || 0) + 1)) / 10) / Math.pow(10, (precision || 0));
+                }
+        try {
+          const apiKey = 'HVJYQJU9FJPZQ9QV2M5YS7ALK'
+          const apiUrl = `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${this.location}%2CUK?unitGroup=us&key=${apiKey}`;
+          const response = await axios.get(apiUrl);
+          this.weatherData = response.data['currentConditions'];
+          this.currentTemperature = roundDecimal(((response.data['currentConditions'].temp)-32)*(5/9),2);
+          this.temperaturefeellike=roundDecimal(((response.data['currentConditions'].feelslike)-32)*(5/9),2);
+          console.log(this.currentTemperature)
+          this.days15 = response.data['days'];
+          this.resolvedAddress = response.data['address'];
+          // Clear the arrays before updating them with new data
+          this.datetimes=[]
+          this.tempmaxs=[]
+          this.tempmins=[]
+          this.feelslikemaxs=[]
+          this.feelslikemins=[]
+          this.humiditys=[]
+          this.conditionss=[]
+          this.sunrises=[]
+          this.sunsets=[]
+          this.visibilitys=[]
+          this.windspeeds=[]
+          for(let i=0;i<15;i++){
+            this.datetimes.push(response.data['days'][i].datetime)
+            this.tempmaxs.push(((response.data['days'][i].tempmax-32)*(5/9)).toFixed(1))
+            this.tempmins.push(((response.data['days'][i].tempmin-32)*(5/9)).toFixed(1))
+            this.feelslikemaxs.push(((response.data['days'][i].feelslikemax-32)*(5/9)).toFixed(1))
+            this.feelslikemins.push(((response.data['days'][i].feelslikemin-32)*(5/9)).toFixed(1))
+            this.humiditys.push(response.data['days'][i].humidity)
+            this.conditionss.push(response.data['days'][i].conditions)
+            this.sunrises.push(response.data['days'][i].sunrise)
+            this.sunsets.push(response.data['days'][i].sunset)
+            this.visibilitys.push(response.data['days'][i].visibility)
+            this.windspeeds.push(response.data['days'][i].windspeed)
+
+          }
+          // Inside the try block, after collecting the data in the for loop
+          // set the showData property to true
+          this.showData=true;
+          //console.log(response.data['days'][0].datetime)
+          for(let i=0;i<15;i++){
+           console.log(this.datetimes[i])
+           console.log(this.tempmaxs[i])
+           console.log(this.tempmins[i])
+           console.log(this.feelslikemaxs[i])
+           console.log(this.feelslikemins[i])
+           console.log(this.humiditys[i])
+           console.log(this.conditionss[i])
+           console.log(this.sunrises[i])
+           console.log(this.sunsets[i])
+           console.log(this.visibilitys[i])
+           console.log(this.windspeeds[i])
+          }
+          console.log(response.data['days'][0]);
+          
+          // Clear the input box after the search
+          this.location = '';
+        } catch (error) {
+          console.error('Error fetching weather data:', error);
+        }
+      },
+    },
+  });
+  app.mount('#app');
+</script>
+</body>
+</html>
